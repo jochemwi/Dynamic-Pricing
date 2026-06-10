@@ -27,19 +27,22 @@ import random as rd
 
 M = 5           # max. shelf life 
 mu = 3          # mean demand of Poisson distribution
-Dmx = 3*mu      # trunacte demand distribution: demand \in {0, 1, 2, ..., Dmx}
+Dmx = 3*mu      # trunacte demand ceiling; you cannot realistically sell more
 prob = pmf_values = poisson.pmf(np.arange(0,Dmx+1), mu)
 prob[Dmx] = 1 - prob[0:Dmx].sum()
-print(prob)
 
 z = 1/sqrt(2)   # for 1 day of safety stock set z = 1/sqrt(2)
-UBI = min( Dmx , 2*mu + z * sqrt(2)*mu ) # Upperbound on \# items in each age class
+
+# Dmx is the practical upperbound and 2 * mu + z * sqrt(2) * mu
+# is a statistical motivated amount. Choose the lowest as the maximum
+# number of items on the shelf per item age.
+UBI = min( Dmx , 2 * mu + z * sqrt(2) * mu ) # Upperbound on \# items in each age class
 
 r = 250         # regular sales price (excl. discount)
 c = 175        # purchase price
 
 Tw = 10         # warmin up period of simulation (is excluded in calculating statistics)
-T = Tw + 36500  # length of a simulation (episode length)
+T = Tw + 36500  # length of a simulation (episode length).
 
 #%% first define empty arrays that can be filled and re-initialized by zeros in a loop 
 # (this prevents high RAM use until Garbage collection)
