@@ -68,12 +68,10 @@ I = np.empty([T + 1, M], dtype = int)
 # realised and before disposal.
 IL = np.empty([T, M], dtype = int)
 
-# Delta Fresh; change in inventory for the fresher age classes after
-# reordering / receiving.
+# Delta FEFO; change in inventory for the oldest products at day's end.
 DeltaF = np.empty([T, M], dtype=int)
 
-# Delta Last; change in inventory for the older / last chance age classes
-# likely after markdown pricing kicks up.
+# Delta LEFO; change in inventory for the fresher products at day's end
 DeltaL = np.empty([T, M], dtype=int)
 
 ## DEMAND TRACKING
@@ -157,70 +155,161 @@ def Index2State(idx):
         idx = idx1
         return np.array(Ilist.reverse()) # return a list of new indices
 
-    ## Evaluate fixed last day discounting by looping over different rates
-    for aa in range(11): # loop over discount percentages
+## Evaluate fixed last day discounting by looping over different rates
+for aa in range(11): # loop over discount percentages
 
-        # re-initialize variables and random seeds.
-        # set all their values back to 0.
-        rd.seed(42)
-        np.random.seed(42)
-        I[:] = np.zeros([T + 1, M], dtype=int)
-        IL[:] = np.zeros([T, M], dtype=int)
-        BSPlvl[:] = np.zeros(T, dtype=int)
-        Order[:] = np.zeros(T, dtype=int)
-        D[:] = np.zeros(T, dtype=int)
-        DF[:] = np.zeros(T, dtype=int)
-        DL[:] = np.zeros(T, dtype=int)
-        DeltaF[:] = np.zeros([T, M], dtype=int)
-        DeltaL[:] = np.zeros([T, M], dtype=int)
-        SALES[:] = np.zeros(T, dtype=int)
-        PRF[:] = np.zeros(T)
-        LS[:] = np.zeros(T, dtype=int)
-        WST[:] = np.zeros(T, dtype=int)
+    # re-initialize variables and random seeds.
+    # set all their values back to 0.
+    rd.seed(42)
+    np.random.seed(42)
+    I[:] = np.zeros([T + 1, M], dtype=int)
+    IL[:] = np.zeros([T, M], dtype=int)
+    BSPlvl[:] = np.zeros(T, dtype=int)
+    Order[:] = np.zeros(T, dtype=int)
+    D[:] = np.zeros(T, dtype=int)
+    DF[:] = np.zeros(T, dtype=int)
+    DL[:] = np.zeros(T, dtype=int)
+    DeltaF[:] = np.zeros([T, M], dtype=int)
+    DeltaL[:] = np.zeros([T, M], dtype=int)
+    SALES[:] = np.zeros(T, dtype=int)
+    PRF[:] = np.zeros(T)
+    LS[:] = np.zeros(T, dtype=int)
+    WST[:] = np.zeros(T, dtype=int)
 
-        # we are still in the previous loop!
-        # Simulate inventory dynamics over all periods.
-        for t in range(T): # loop over all steps
+    # we are still in the previous loop!
+    # Simulate inventory dynamics over all periods.
+    for t in range(T): # loop over all steps
 
-            # observe state
-            if t < 0: # if the step is negative, print the inventory of that step
-                print(I[t], State2Index(I[t]))
+        # observe state
+        if t < 0: # if the step is negative, print the inventory of that step
+            print(I[t], State2Index(I[t]))
 
-            # predict demand and set Base Stock Policy level
-            # (the target stock the policy wants to achieve)
-            BSPlvl[t] = round(2 * mu + z * 2 * sqrt(mu))
+        # predict demand and set Base Stock Policy level
+        # (the target stock the policy wants to achieve)
+        BSPlvl[t] = round(2 * mu + z * 2 * sqrt(mu))
 
-            # set discount
-            a = 0.05 * aa # discount level increments by a value of 0.05
+        # set discount
+        a = 0.05 * aa # discount level increments by a value of 0.05
 
-            # set order quantity; this is either 0, or a value
-            # that depends on the target stock - real stock.
-            # if there is enough stock already, nothing is ordered.
-            Order[t] = max(0, BSPlvl[t] - I[t].sum())
+        # set order quantity; this is either 0, or a value
+        # that depends on the target stock - real stock.
+        # if there is enough stock already, nothing is ordered.
+        Order[t] = max(0, BSPlvl[t] - I[t].sum())
 
-            # Set demand. This can be the total stock at maximum,
-            # but can take a minimum of 0.
-            # the real minimum value is randomly drawn from Poisson.
-            D[t] = min(Dmx, np.random.poisson(mu))
+        # Set demand. This can be the total stock at maximum,
+        # but can take a minimum of 0.
+        # the real minimum value is randomly drawn from Poisson.
+        D[t] = min(Dmx, np.random.poisson(mu))
 
-            # Split demand. Check whether there are less products on
-            # the last day or in total given the discount.
-            DF_frac = min(I[t, M - 1], a * D[t])
+        # Split demand. Check whether there are less products on
+        # the last day or in total given the discount.
+        DF_frac = min(I[t, M - 1], a * D[t])
 
-            # if the discount was the previous minimal value,
-            # this value is now changed into an integer.
-            DF_int = int(DF_frac)
+        # if the discount was the previous minimal value,
+        # this value is now changed into an integer.
+        DF_int = int(DF_frac)
 
-            # The Demand FEFO for this step is now updated.
-            # hence, the demand for FEFO products is calculated.
-            DF[t] = DF_int
+        # The Demand FEFO for this step is now updated.
+        # hence, the demand for FEFO products is estimated for this step
+        DF[t] = DF_int
+
+        # Randomly increase the FEFO demand (fresh stock that customers
+        # choose) in this step in case the expected demand was
+        # calculated through the discounted demand formula above.
+        if DF_frac != DF_int: # stochastic rounding
+
+            # difference between rounded and fractioned FEFO demand
+            Frac = DF_frac - DF_int
+
+            # get random value between 0 and 1.
+            u = rd.random()
+
+            # the demand is increased by 1 if the random value is lower
+            # than the FEFO fraction.
+            if u < Frac:
+                DF[t] = DF_int + 1
+
+        # The total LEFO demand is the daily demand minus the FEFO demand
+        # so either the full last day's inventory or part of it is excluded
+        DL[t] = D[t] - DF[t]
+
+        # pick FEFO demand:
+        # only oldest fraction to sell are discounted (<= max I[t,M-1])
+        # set the FEFO to sell
+        DeltaF[t, M - 1] = DF[t]
+
+        # available for LEFO customers/adjust stock levels:
+        # LEFO inventory is calculated by subtracting today's FEFO demand
+        # from the total inventory.
+        IL[t] = I[t] - DeltaF[t]
+
+        # pick LEFO demand:
+        # add the youngest productg. This is either the daily LEFO demand or
+        # LEFO inventory at day 1 if it is the smallest value.
+        # you cannot sell more products in LEFO category if you did not order
+        # that many the previous day
+        DeltaL[t, 0] = min(DL[t], IL[t, 0])  # youngest first
+
+        # for each each on this day, determine the LEFO demand change
+        # that is either the daily LEFO demand minus the products that are
+        # already freshly ordered, or the LEFO inventory of that day.
+        for i in range(1, M):
+
+            # simply set the new LEFO demand for each day
+            # the demand for each older product decreases
+            DeltaL[t, i] = min(DL[t] - DeltaL[t, 0:i].sum(), IL[t, i])
+
+        # adjust stock levels:
+        # the new stock levels for tomorrow's inventory is today's
+        # LEFO inventory minus today's netto LEFO demand.
+        # this is the inventory after both the FEFO and LEFO demand is satisfied
+        I[t + 1, :] = IL[t] - DeltaL[t]
+
+        # the waste of the oldest age products is the LEFO inventory space
+        # minus the daily demand for LEFO products
+        WST[t] = I[t + 1, M - 1]
+
+        # tomorrow's inventory is today's inventory, but the supply
+        # of the ages is moved to the next age. Hence, freshness 1
+        # becomes freshness 2, and so on.
+        I[t + 1, :] = np.roll(I[t + 1], 1)
+
+        # the freshest product count tomorrow is what we had to order today
+        I[t + 1, 0] = Order[t]  # as lead time is one period
+
+        # more stats:
+        # the lost sales because there was more demand; the daily demand
+        # minus the total inventory space.
+        LS[t] = max(0, D[t] - I[t].sum())
+
+        # the number of units that were sold are the daily FEFO demand and
+        # daily LEFO
+        SALES[t] = DeltaF[t].sum() + DeltaL[t].sum()
+
+        # calculate the profit in currency
+        # LEFO profit, discounted FEFO profit minus order costs.
+        PRF[t] = r * DeltaL[t].sum() + r * (1 - a) * DeltaF[t].sum() - c * Order[t]
+
+    ## after one full episode:
+    # COMPUTE & PRINT AVERAGES OF KEY PERFORMANCE MEASURES
+
+    # average waste; what is the waste percentage of the total order?
+    WasteRel = WST[Tw:T].mean() / Order[Tw:T].mean()
+
+    # the fill rate is the 1 minus the average of how much product you
+    # have lost compared to the average demand. So what percent of customers
+    # on average could you not satisfy?
+    Fillrate = 1 - LS[Tw:T].mean() / D[Tw:T].mean()
+
+    # calculate the mean profit
+    Profit[aa] = PRF[Tw:T].mean()
+
+    # print these statistics for each discount value
+    print(f"Discount = {a * 100:.0f}%, "
+          f"Profit = {Profit[aa]:.3f}, "
+          f"Waste = {WasteRel * 100:.1f} %, "
+          f"Fillrate = {Fillrate * 100:.1f} %")
 
 
-            if DF_frac != DF_int: # stochastic rounding
-                Frac = DF_frac - DF_int
-                u = rd.random()
-                if u < Frac:
-                    DF[t] = DF_int + 1
-            DL[t] = D[t] - DF[t]
 
 

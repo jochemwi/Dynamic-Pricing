@@ -159,7 +159,7 @@ plt.show()
 # plt.show()
 
 df = pd.DataFrame(
-    {'I' : list(I[0:T]),
+    {'I' : list(I[0:T])# ,
      'BSPlvl': BSPlvl,
      'Order': Order,
      'D': D,
