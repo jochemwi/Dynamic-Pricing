@@ -204,7 +204,7 @@ def Index2State(idx):
             D[t] = min(Dmx, np.random.poisson(mu))
 
             # Split demand. Check whether there are less products on
-            # the one-to-last day or in total given the discount.
+            # the last day or in total given the discount.
             DF_frac = min(I[t, M - 1], a * D[t])
 
             # if the discount was the previous minimal value,
