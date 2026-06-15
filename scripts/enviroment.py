@@ -13,8 +13,9 @@ class Environment():
             regular_sales_price=250,    # selling price without discount
             purchase_price=175,         # cost per item ordered
             discount_levels=11,         # number of discount levels (0% to 50%)
+            discount = 0.05,
             warm_up = 10,               # period after which statistics start 
-            z = 1/sqrt(2)               # safety factor for base stock level
+            z = 1/sqrt(3)               # safety factor for base stock level
             ):
         
         self.M = max_shelf_life
@@ -22,13 +23,15 @@ class Environment():
         self.max_demand = mu * 3                        # maximize demand distribution at 3x mean
         self.regular_sales_price = regular_sales_price
         self.purchase_price = purchase_price
-        self.discount_levels = discount_levels          
+        self.discount_levels = discount_levels
+        self.discount = discount          
         self.safety_factor = z
         self.warm_up = warm_up
         self.sim_length = self.warm_up + 36500          # total simulation length including
         self.prob = self.probability()                  # demand probabilities follwing poisson
         self.reset()                                    # initialize arrays on initilisation Enviroment
         self.UBI = min(self.max_demand, 2*self.mu + self.safety_factor * sqrt(2)*self.mu)
+        self.base_stock = round(2*self.mu + self.safety_factor * sqrt(2)*self.mu)
     
     def probability(self):
         # compute truncated Poisson demand probabilities
@@ -62,6 +65,7 @@ class Environment():
          # compute how many FEFO customers buy discounted oldest items
          # action = discount rate, so action * D[t] = fraction of demand attracted to discounted items
          # cannot exceed available oldest stock I[t, M-1]
+         # sefo
         self.fefo_demand_frac = min(self.inventory_matrix[self.t, self.M-1], action * self.demand[self.t])
         self.fefo_demand_int = int(self.fefo_demand_frac)
         self.fefo_demand[self.t] = self.fefo_demand_int
@@ -146,7 +150,8 @@ class Environment():
 
     def plot_env_results(self, profit):
         # plot fixed last-day discounting
-        step = 100 / (self.discount_levels - 1) # automatically changes with discount levels instead of calculating range and fraction
+        step = self.discount * 100
+        # step = 100 / (self.discount_levels - 1) # automatically changes with discount levels instead of calculating range and fraction
         plt.plot(step * np.arange(self.discount_levels), profit,  marker='o')
         plt.title("Fixed last-day discounting")
         plt.xlabel("discount %")
@@ -166,3 +171,40 @@ class Environment():
                 f"safety_factor={self.safety_factor:.3f}, "
                 f"warm_up={self.warm_up}, "
                 f"sim_length={self.sim_length})")
+    
+
+    def transition(self, state, action, demand):
+        
+        # order quantity (same as step())
+        order = max(0, self.base_stock - state.sum())
+        
+        # split demand (deterministic version of split_demand()) 
+        # simplification of stochastic rounding
+        fefo = min(state[self.M-1], round(action * demand))
+        lefo = demand - fefo
+        
+        # FEFO picks from oldest slot only (same as update_inventory())
+        inv_after_fefo = state.copy()
+        inv_after_fefo[self.M-1] -= fefo
+        
+        # LEFO picks from freshest first (same as update_inventory())
+        items_lefo = np.zeros(self.M, dtype=int)
+        remaining = lefo
+        for i in range(self.M):
+            items_lefo[i] = min(remaining, inv_after_fefo[i])
+            remaining -= items_lefo[i]
+        
+        inv_remaining = inv_after_fefo - items_lefo
+        
+        # build next state (same as update_inventory())
+        next_state = np.zeros(self.M, dtype=int)
+        next_state[0] = order
+        next_state[1:] = inv_remaining[:self.M-1]
+        
+        # reward (same as compute_stats())
+        lefo_sales = items_lefo.sum()
+        reward = (self.regular_sales_price * lefo_sales
+                + self.regular_sales_price * (1 - action) * fefo
+                - self.purchase_price * order)
+        
+        return next_state, reward

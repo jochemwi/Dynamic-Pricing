@@ -31,7 +31,7 @@ Dmx = 3*mu      # trunacte demand ceiling; you cannot realistically sell more
 prob = pmf_values = poisson.pmf(np.arange(0,Dmx+1), mu)
 prob[Dmx] = 1 - prob[0:Dmx].sum()
 
-z = 1/sqrt(2)   # for 1 day of safety stock set z = 1/sqrt(2)
+z = 1/sqrt(mu)   # for 1 day of safety stock set z = 1/sqrt(2)
 
 # Dmx is the practical upperbound and 2 * mu + z * sqrt(2) * mu
 # is a statistical motivated amount. Choose the lowest as the maximum
