@@ -175,3 +175,15 @@ class Environment():
                 f"safety_factor={self.safety_factor:.3f}, "
                 f"warm_up={self.warm_up}, "
                 f"sim_length={self.sim_length})")
+    
+# plot
+env = Environment()
+profits = []
+for action in range(env.discount_levels):
+    env.reset()
+    done = False
+    while not done:
+        _, _, done = env.step(action)
+    profits.append(env.get_statistics()['profit'])
+
+env.plot_env_results(profits)
