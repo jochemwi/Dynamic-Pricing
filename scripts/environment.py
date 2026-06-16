@@ -29,9 +29,9 @@ class Environment():
         self.warm_up = warm_up
         self.sim_length = self.warm_up + 36500          # total simulation length including
         self.prob = self.probability()                  # demand probabilities follwing poisson
-        self.reset()                                    # initialize arrays on initilisation Enviroment
         self.UBI = min(self.max_demand, 2*self.mu + self.safety_factor * sqrt(2)*self.mu)
         self.base_stock = round(2*self.mu + self.safety_factor * sqrt(2)*self.mu)
+        self.reset()                                    # initialize arrays on initilisation Enviroment
     
     def probability(self):
         # compute truncated Poisson demand probabilities
@@ -59,7 +59,7 @@ class Environment():
         self.lost_sales = np.zeros(self.sim_length, dtype=int)                              # lost sales per period
         self.waste = np.zeros(self.sim_length, dtype=int)                                   # waste per period
         self.t = 0                                                                          # current time step
-        return self.inventory_matrix[0]                                                     # return initial state (all zeros) ([0,0,0,0,0] with m = 5)
+        return self.state2index(self.inventory_matrix[0])                                                # return initial state (all zeros) ([0,0,0,0,0] with m = 5)
     
     def split_demand(self, action): # action is fraction of demand atracted to discount
          # compute how many FEFO customers buy discounted oldest items
@@ -118,20 +118,24 @@ class Environment():
         }
 
     def step(self, action):
-        # compute base stock level, target inventory to maintain
-        self.base_stock_level[self.t] = round(2*self.mu + self.safety_factor * sqrt(2)*self.mu) # how much we want on a shelf
-        # order enough to bring total stock back up to base stock level
-        self.order_quantity[self.t] = max(0, self.base_stock_level[self.t] - self.inventory_matrix[self.t].sum()) 
-        # sample random demand, capped at max_demand
+        # convert discrete action integer to discount fraction
+        discount_fraction = action * self.discount  # e.g. action=3 → 0.15 → 15% discount
+
+        self.base_stock_level[self.t] = round(2*self.mu + self.safety_factor * sqrt(2)*self.mu)
+        self.order_quantity[self.t] = max(0, self.base_stock_level[self.t] - self.inventory_matrix[self.t].sum())
         self.demand[self.t] = min(self.max_demand, np.random.poisson(self.mu))
-        self.split_demand(action) # split demand is called upon to decide how many custommers are FEFO and how many LEFO
-        self.update_inventory() # removes from shelf prepares inventory for next period
-        self.compute_stats(action) # Calculates lost sales, total sales, and profit for this period
-        reward = self.profit[self.t] # reward is ptofit in step
-        next_state = self.inventory_matrix[self.t + 1] # the new inventory we computed at update inventory
-        self.t += 1 # move to next time step
-        done = self.t >= self.sim_length # check if episode is over
-        return next_state, reward, done # return what agent needs in next step
+        
+        self.split_demand(discount_fraction)
+        self.update_inventory()
+        self.compute_stats(discount_fraction)
+
+        reward = self.profit[self.t]
+        next_state_vec = self.inventory_matrix[self.t + 1]
+        next_state_idx = self.state2index(next_state_vec)  # return scalar index
+
+        self.t += 1
+        done = self.t >= self.sim_length
+        return next_state_idx, reward, done
 
     def state2index(self, state):
         idx = state[0]
@@ -171,40 +175,3 @@ class Environment():
                 f"safety_factor={self.safety_factor:.3f}, "
                 f"warm_up={self.warm_up}, "
                 f"sim_length={self.sim_length})")
-    
-
-    def transition(self, state, action, demand):
-        
-        # order quantity (same as step())
-        order = max(0, self.base_stock - state.sum())
-        
-        # split demand (deterministic version of split_demand()) 
-        # simplification of stochastic rounding
-        fefo = min(state[self.M-1], round(action * demand))
-        lefo = demand - fefo
-        
-        # FEFO picks from oldest slot only (same as update_inventory())
-        inv_after_fefo = state.copy()
-        inv_after_fefo[self.M-1] -= fefo
-        
-        # LEFO picks from freshest first (same as update_inventory())
-        items_lefo = np.zeros(self.M, dtype=int)
-        remaining = lefo
-        for i in range(self.M):
-            items_lefo[i] = min(remaining, inv_after_fefo[i])
-            remaining -= items_lefo[i]
-        
-        inv_remaining = inv_after_fefo - items_lefo
-        
-        # build next state (same as update_inventory())
-        next_state = np.zeros(self.M, dtype=int)
-        next_state[0] = order
-        next_state[1:] = inv_remaining[:self.M-1]
-        
-        # reward (same as compute_stats())
-        lefo_sales = items_lefo.sum()
-        reward = (self.regular_sales_price * lefo_sales
-                + self.regular_sales_price * (1 - action) * fefo
-                - self.purchase_price * order)
-        
-        return next_state, reward

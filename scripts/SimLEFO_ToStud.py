@@ -104,7 +104,7 @@ for aa in  range(11):   #LOOP OVER DISCOUNT PERCENTAGES
         # predict demand and set BSP level
         BSPlvl[t] = round(2*mu + z * sqrt(2)*mu)
         # set discount
-        a = 0.05*aa
+        a = 0.05 *aa
         # set order quantity:
         Order[t] = max(0, BSPlvl[t] - I[t].sum())
         # set demand:
@@ -159,7 +159,7 @@ plt.show()
 # plt.show()
 
 df = pd.DataFrame(
-    {'I' : list(I[0:T])# ,
+    {'I' : list(I[0:T]), # ,
      'BSPlvl': BSPlvl,
      'Order': Order,
      'D': D,
