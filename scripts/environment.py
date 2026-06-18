@@ -15,7 +15,8 @@ class Environment():
             discount_levels=11,         # number of discount levels (0% to 50%)
             discount = 0.05,
             warm_up = 10,               # period after which statistics start 
-            z = 1/sqrt(3)               # safety factor for base stock level
+            z = 1/sqrt(3),               # safety factor for base stock level
+            seed = 42,
             ):
         
         self.M = max_shelf_life
@@ -29,8 +30,12 @@ class Environment():
         self.warm_up = warm_up
         self.sim_length = self.warm_up + 36500          # total simulation length including
         self.prob = self.probability()                  # demand probabilities follwing poisson
-        self.UBI = min(self.max_demand, 2*self.mu + self.safety_factor * sqrt(2)*self.mu)
+        self.UBI = int(min(self.max_demand, 2*self.mu + self.safety_factor * sqrt(2)*self.mu))
         self.base_stock = round(2*self.mu + self.safety_factor * sqrt(2)*self.mu)
+        self.seed = seed
+        np.random.seed(seed)
+        rd.seed(seed)
+
         self.reset()                                    # initialize arrays on initilisation Enviroment
     
     def probability(self):
@@ -41,9 +46,6 @@ class Environment():
         return prob
 
     def reset(self):
-        # random seed for repproducability
-        rd.seed(42)
-        np.random.seed(42)
         # initialize all arrays to zero
         self.inventory_matrix = np.zeros([self.sim_length+1, self.M], dtype=int)            # inventory matrix
         self.inventory_after_fefo = np.zeros([self.sim_length, self.M], dtype=int)          # inventory after FEFO demand is met
@@ -176,14 +178,14 @@ class Environment():
                 f"warm_up={self.warm_up}, "
                 f"sim_length={self.sim_length})")
     
-# plot
-env = Environment()
-profits = []
-for action in range(env.discount_levels):
-    env.reset()
-    done = False
-    while not done:
-        _, _, done = env.step(action)
-    profits.append(env.get_statistics()['profit'])
+# # plot
+# env = Environment()
+# profits = []
+# for action in range(env.discount_levels):
+#     env.reset()
+#     done = False
+#     while not done:
+#         _, _, done = env.step(action)
+#     profits.append(env.get_statistics()['profit'])
 
-env.plot_env_results(profits)
+# env.plot_env_results(profits)
