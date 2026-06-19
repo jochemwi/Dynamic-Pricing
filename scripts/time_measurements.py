@@ -3,6 +3,7 @@ import pandas as pd
 
 from environment import Environment
 from Q_learning_algorithm import run_q_learning
+from sarsa_algorithm import run_sarsa
 
 # settings = [
 #     (5, 3, 3),
@@ -18,7 +19,7 @@ methods = {
     # 'Policy iteration': run_policy_iteration,
     # 'Value iteration':  run_value_iteration,   
     'Q-learning':       run_q_learning,         
-#     'Sarsa':            run_sarsa,
+    'Sarsa':            run_sarsa,
 }
 
 repetitions = 2

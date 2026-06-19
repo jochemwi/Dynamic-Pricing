@@ -53,10 +53,20 @@ def sarsa_with_eval(epsilon, gamma, alpha, decay, epsilon_min, episodes, envirom
     return q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate
 
 
-def greedy_eval_reward(q_table, enviroment=Environment(), eval_seed=999):
+def greedy_eval_reward(q_table, enviroment, eval_seed=999):
     np_state, rd_state = np.random.get_state(), random.getstate()
 
-    env = Environment(seed=eval_seed)
+    env = Environment(
+        max_shelf_life=enviroment.M,
+        mu=enviroment.mu,
+        regular_sales_price=enviroment.regular_sales_price,
+        purchase_price=enviroment.purchase_price,
+        discount_levels=enviroment.discount_levels,
+        discount=enviroment.discount,
+        warm_up=enviroment.warm_up,
+        z=enviroment.safety_factor,
+        seed=eval_seed,
+    )
     state = env.reset()
     done, total, n = False, 0.0, 0
     while not done:
@@ -72,16 +82,26 @@ def greedy_eval_reward(q_table, enviroment=Environment(), eval_seed=999):
     fill_rate = 1 - env.lost_sales.sum() / env.demand.sum()
     return total / n, waste_pct, fill_rate
 
+def run_sarsa(env, episodes=3, eval_every=5000, eval_seed=2,
+                    epsilon=1, gamma=0.9, alpha=0.1, decay=0.9999, epsilon_min=0.05):
+    q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate = sarsa_with_eval(
+        epsilon=epsilon, gamma=gamma, alpha=alpha, decay=decay, epsilon_min=epsilon_min,
+        episodes=episodes, enviroment=env, eval_every=eval_every, eval_seed=eval_seed,
+    )
+    profit = np.mean(eval_rewards[-5:])
+    waste = np.mean(eval_waste[-5:])
+    fill_rate = np.mean(eval_fill_rate[-5:])
+    return q_table, profit, waste, fill_rate
 
-env = Environment(seed=1)
-q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate = sarsa_with_eval(
-    epsilon=1, gamma=0.9, alpha=0.1, decay=0.9999, epsilon_min=0.05,
-    episodes=3, enviroment=env, eval_every=5000, eval_seed=2)
-print(f"profit: {round(np.mean(eval_rewards[-5:]), 3)}", f"waste: {round(np.mean(eval_waste[-5:]) * 100, 1)}%", f"fillrate: {round(np.mean(eval_fill_rate[-5:]) * 100, 1)}%")
+# env = Environment(seed=1)
+# q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate = sarsa_with_eval(
+#     epsilon=1, gamma=0.9, alpha=0.1, decay=0.9999, epsilon_min=0.05,
+#     episodes=3, enviroment=env, eval_every=5000, eval_seed=2)
+# print(f"profit: {round(np.mean(eval_rewards[-5:]), 3)}", f"waste: {round(np.mean(eval_waste[-5:]) * 100, 1)}%", f"fillrate: {round(np.mean(eval_fill_rate[-5:]) * 100, 1)}%")
 
-plt.plot(eval_steps, eval_rewards, marker='o')
-plt.xlabel("Training step")
-plt.ylabel("Greedy eval reward (mean profit/step)")
-plt.title("SARSA evaluation curve")
-plt.grid(True)
-plt.show()
+# plt.plot(eval_steps, eval_rewards, marker='o')
+# plt.xlabel("Training step")
+# plt.ylabel("Greedy eval reward (mean profit/step)")
+# plt.title("SARSA evaluation curve")
+# plt.grid(True)
+# plt.show()
