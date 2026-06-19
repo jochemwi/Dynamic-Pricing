@@ -4,6 +4,7 @@ import pandas as pd
 from environment import Environment
 from Q_learning_algorithm import run_q_learning
 from sarsa_algorithm import run_sarsa
+import dynamic_programming
 
 # settings = [
 #     (5, 3, 3),
