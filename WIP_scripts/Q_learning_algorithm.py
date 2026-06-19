@@ -3,7 +3,7 @@ import random
 from math import ceil
 import matplotlib.pyplot as plt
 
-from environment import Environment
+from scripts.environment import Environment
 
 
 def q_learning_with_eval(epsilon, gamma, alpha, decay, epsilon_min, episodes, enviroment, eval_every=5000, eval_seed=999):
