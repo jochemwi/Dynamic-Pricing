@@ -92,7 +92,7 @@ def run_q_learning(env, episodes=3, eval_every=5000, eval_seed=2,
     profit = np.mean(eval_rewards[-5:])
     waste = np.mean(eval_waste[-5:])
     fill_rate = np.mean(eval_fill_rate[-5:])
-    return q_table, profit, waste, fill_rate
+    return profit, waste, fill_rate
 
 # env = Environment(seed=1)
 # q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate  = q_learning_with_eval(
