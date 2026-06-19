@@ -15,7 +15,8 @@ class Environment():
             discount_levels=11,         # number of discount levels (0% to 50%)
             discount = 0.05,
             warm_up = 10,               # period after which statistics start 
-            z = 1/sqrt(3)               # safety factor for base stock level
+            z = 1/sqrt(3),               # safety factor for base stock level
+            seed = 42,
             ):
         
         self.M = max_shelf_life
@@ -29,8 +30,12 @@ class Environment():
         self.warm_up = warm_up
         self.sim_length = self.warm_up + 36500          # total simulation length including
         self.prob = self.probability()                  # demand probabilities follwing poisson
-        self.UBI = min(self.max_demand, 2*self.mu + self.safety_factor * sqrt(2)*self.mu)
+        self.UBI = int(min(self.max_demand, 2*self.mu + self.safety_factor * sqrt(2)*self.mu))
         self.base_stock = round(2*self.mu + self.safety_factor * sqrt(2)*self.mu)
+        self.seed = seed
+        np.random.seed(seed)
+        rd.seed(seed)
+
         self.reset()                                    # initialize arrays on initilisation Enviroment
     
     def probability(self):
@@ -41,9 +46,6 @@ class Environment():
         return prob
 
     def reset(self):
-        # random seed for repproducability
-        rd.seed(42)
-        np.random.seed(42)
         # initialize all arrays to zero
         self.inventory_matrix = np.zeros([self.sim_length+1, self.M], dtype=int)            # inventory matrix
         self.inventory_after_fefo = np.zeros([self.sim_length, self.M], dtype=int)          # inventory after FEFO demand is met
@@ -66,7 +68,6 @@ class Environment():
          # action = discount rate, so action * D[t] = fraction of demand attracted to discounted items
          # cannot exceed available oldest stock I[t, M-1]
          # sefo
-
         self.fefo_demand_frac = min(self.inventory_matrix[self.t, self.M-1], action * self.demand[self.t])
         self.fefo_demand_int = int(self.fefo_demand_frac)
         self.fefo_demand[self.t] = self.fefo_demand_int
@@ -77,7 +78,6 @@ class Environment():
                 self.fefo_demand[self.t] = self.fefo_demand_int + 1
         # remaining demand goes to LEFO customers (buy fresh)
         self.lefo_demand[self.t] = self.demand[self.t] - self.fefo_demand[self.t]
-
 
     def update_inventory(self):
         # FEFO customers only pick from oldest age class (M-1)
@@ -104,12 +104,12 @@ class Environment():
         # total sales = all items picked by both customer types (FEFO + LEFO)
         self.sales[self.t] = self.items_picked_fefo[self.t].sum() + self.items_picked_lefo[self.t].sum()
         # profit = regular sales revenue + discounted sales revenue - purchase cost
-        self.profit[self.t] = (self.regular_sales_price * self.items_picked_lefo[self.t].sum()
-                          + self.regular_sales_price * (1 - action) * self.items_picked_fefo[self.t].sum()
+        self.profit[self.t] = (self.regular_sales_price * self.items_picked_lefo[self.t].sum() \
+                          + self.regular_sales_price * (1 - action) * self.items_picked_fefo[self.t].sum() \
                           - self.purchase_price * self.order_quantity[self.t])
         if p:
             self.profit[self.t] = self.profit[self.t] * p
-        
+
     def get_statistics(self):
         # compute performance metrics excluding warm-up period
         waste_rel = self.waste[self.warm_up:].mean() / self.order_quantity[self.warm_up:].mean()
@@ -222,6 +222,16 @@ class Environment():
                 f"warm_up={self.warm_up}, "
                 f"sim_length={self.sim_length})")
 
+
+# # plot
+# env = Environment()
+# profits = []
+# for action in range(env.discount_levels):
+#     env.reset()
+#     done = False
+#     while not done:
+#         _, _, done = env.step(action)
+#     profits.append(env.get_statistics()['profit'])
 
 # # plot
 # env = Environment()
