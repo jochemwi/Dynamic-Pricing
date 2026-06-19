@@ -66,6 +66,7 @@ class Environment():
          # action = discount rate, so action * D[t] = fraction of demand attracted to discounted items
          # cannot exceed available oldest stock I[t, M-1]
          # sefo
+
         self.fefo_demand_frac = min(self.inventory_matrix[self.t, self.M-1], action * self.demand[self.t])
         self.fefo_demand_int = int(self.fefo_demand_frac)
         self.fefo_demand[self.t] = self.fefo_demand_int
@@ -76,6 +77,7 @@ class Environment():
                 self.fefo_demand[self.t] = self.fefo_demand_int + 1
         # remaining demand goes to LEFO customers (buy fresh)
         self.lefo_demand[self.t] = self.demand[self.t] - self.fefo_demand[self.t]
+
 
     def update_inventory(self):
         # FEFO customers only pick from oldest age class (M-1)
@@ -96,15 +98,17 @@ class Environment():
         # new order arrives in slot 0 (lead time = 1 period)
         self.inventory_matrix[self.t+1, 0] = self.order_quantity[self.t]
 
-    def compute_stats(self, action):
+    def compute_stats(self, action, p = None):
         # lost sales = demand that could not be met from available stock
         self.lost_sales[self.t] = max(0, self.demand[self.t] - self.inventory_matrix[self.t].sum())
         # total sales = all items picked by both customer types (FEFO + LEFO)
         self.sales[self.t] = self.items_picked_fefo[self.t].sum() + self.items_picked_lefo[self.t].sum()
         # profit = regular sales revenue + discounted sales revenue - purchase cost
-        self.profit[self.t] = (self.regular_sales_price * self.items_picked_lefo[self.t].sum() \
-                          + self.regular_sales_price * (1 - action) * self.items_picked_fefo[self.t].sum() \
+        self.profit[self.t] = (self.regular_sales_price * self.items_picked_lefo[self.t].sum()
+                          + self.regular_sales_price * (1 - action) * self.items_picked_fefo[self.t].sum()
                           - self.purchase_price * self.order_quantity[self.t])
+        if p:
+            self.profit[self.t] = self.profit[self.t] * p
         
     def get_statistics(self):
         # compute performance metrics excluding warm-up period
@@ -136,6 +140,48 @@ class Environment():
         self.t += 1
         done = self.t >= self.sim_length
         return next_state_idx, reward, done
+
+    def get_probability_matrix(self, SS, PP, inventory_matrix, ida, ids, action):
+        '''Create a probability matrix for next states (inventory)
+
+        :param SS: np.array of shape (nS, M). Contains all possible inventories.
+        :param PP: np.array of shape (nA, nS, nS). Contains the probabilities
+            of the next state given the current state and current action.
+        :param inventory_matrix: np.array of shape (M). Contains the current
+            inventory.
+        :param ida: int. The index of current action in the action matrix.
+        :param action: int. Current action.
+        :return: Updated probability matrix,
+            type: np.array with shape (nA, nS, nS).
+        '''
+
+        self.inventory_matrix[self.t,:] = inventory_matrix
+
+        discount_fraction = action * self.discount
+        self.base_stock_level[self.t] = round(2 * self.mu + self.safety_factor * sqrt(2) * self.mu)
+        self.order_quantity[self.t] = max(0, self.base_stock_level[self.t] - self.inventory_matrix[self.t].sum())
+
+        PP, tot_profit = self.demand_profit(SS, PP, ida, ids, discount_fraction)
+        return PP, tot_profit
+
+    def demand_profit(self, SS, PP, ida, ids, discount_fraction):
+        tot_profit = 0
+
+        for idd, d in enumerate(range(self.max_demand + 1)):  # demand
+            self.demand[self.t] = d
+
+            self.split_demand(discount_fraction)
+            self.update_inventory()
+
+            next_state_vec = self.inventory_matrix[self.t + 1]
+            ids1 = np.where((SS == next_state_vec).all(axis=1))[0][0].item()
+
+            p = self.prob[idd]
+            PP[ida, ids, ids1] += p
+            self.compute_stats(discount_fraction, p)
+            tot_profit += self.profit[self.t]
+
+        return PP, tot_profit
 
     def state2index(self, state):
         idx = state[0]
@@ -175,15 +221,16 @@ class Environment():
                 f"safety_factor={self.safety_factor:.3f}, "
                 f"warm_up={self.warm_up}, "
                 f"sim_length={self.sim_length})")
-    
-# plot
-env = Environment()
-profits = []
-for action in range(env.discount_levels):
-    env.reset()
-    done = False
-    while not done:
-        _, _, done = env.step(action)
-    profits.append(env.get_statistics()['profit'])
 
-env.plot_env_results(profits)
+
+# # plot
+# env = Environment()
+# profits = []
+# for action in range(env.discount_levels):
+#     env.reset()
+#     done = False
+#     while not done:
+#         _, _, done = env.step(action)
+#     profits.append(env.get_statistics()['profit'])
+#
+# env.plot_env_results(profits)
