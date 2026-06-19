@@ -1,3 +1,9 @@
+import numpy as np
+from math import sqrt
+import matplotlib.pyplot as plt
+from scipy.stats import poisson
+import random as rd
+
 class Environment():
     def __init__(
             self, 

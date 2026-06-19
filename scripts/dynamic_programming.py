@@ -1,9 +1,10 @@
 import numpy as np
 import itertools as it
 from numpy.typing import NDArray
-import environment
+from environment import Environment
+import traceback
 
-def get_variables(env):
+def get_variables(env:Environment):
     """Initiate all variables.
 
     :param env: Class Environment. Contains the environment.
@@ -46,7 +47,7 @@ def check_states(pp:NDArray, action_states:bool = False) -> None:
             print(f'Action {i} has {count} possible states.')
 
 
-def get_matrices(env, ss, pp, rr):
+def get_matrices(env:Environment, ss, pp, rr):
     """Create probability and reward matrices.
 
     :param env: Class environment. Contains the environment.
@@ -179,14 +180,15 @@ def print_policy_contents(pi:NDArray) -> None:
     for key in sorted(val_d.keys()):
         print(f'Action {key} is chosen {val_d[key]} times')
 
-def run_dp_model(pi:NDArray, ss:NDArray):
+def run_dp_model(env:Environment, pi:NDArray, ss:NDArray):
     """Run the best policy in the environment.
 
+    :param env: Class environment. Contains the environment.
     :param pi: np.array of shape (ns). Contains a policy (the best).
     :param ss: np.array of shape (ns,ns). Contains the all states.
     :return: mean profit, waste and fill rate, all float.
     """
-    env = environment.Environment()
+    env.reset()
 
     done = False
     while not done:
@@ -254,28 +256,42 @@ def value_iteration(na:int, ns:int, ss:NDArray, rr:NDArray, pp:NDArray,
 
     return pi
 
-def run_ipe_and_pi(env):
+def run_ipe_and_pi(env:Environment):
     """Run Iterative Policy Evaluation and Policy Improvement.
 
     :param env: Class Environment. Contains the environment.
     :return: policy, profit, waste, fill rate
     """
 
+    print('=====PROGRESS IPE+PI=====')
+    print('0%')
     ss, ns, na, rr, pp = get_variables(env)
+    print('20%')
     pp, rr = get_matrices(env,ss,pp,rr)
+    print('50%')
     pi = policy_iteration_and_evaluation(na,ns,ss,rr,pp)
-    profit, waste, fill_rate = run_dp_model(pi, ss)
+    print('70%')
+    profit, waste, fill_rate = run_dp_model(env, pi, ss)
+    print('100')
+    print('=====END IPE+PI=====\n')
     return pi, profit, waste, fill_rate
 
-def run_vi(env):
+def run_vi(env:Environment):
     """Run value Iteration.
 
     :param env: Class Environment. Contains the environment.
     :return: policy, profit, waste, fill rate
     """
 
+    print('=====PROGRESS IPE+PI=====')
+    print('0%')
     ss, ns, na, rr, pp = get_variables(env)
+    print('20%')
     pp, rr = get_matrices(env,ss,pp,rr)
+    print('40%')
     pi = value_iteration(na,ns,ss,rr,pp)
-    profit, waste, fill_rate = run_dp_model(pi, ss)
+    print('70%')
+    profit, waste, fill_rate = run_dp_model(env, pi, ss)
+    print('100%')
+    print('=====END IPE+PI=====\n')
     return pi, profit, waste, fill_rate
