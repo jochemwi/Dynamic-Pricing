@@ -14,7 +14,7 @@ from math import sqrt
 #     (7, 3, 3),
 # ]
 
-settings = [(5, 3, 1/sqrt(2))]
+settings = [(5, 3, 1/sqrt(3))]
 
 methods = {
     'Policy iteration': dp.run_ipe_and_pi,

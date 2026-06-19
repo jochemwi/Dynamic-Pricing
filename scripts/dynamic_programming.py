@@ -2,7 +2,6 @@ import numpy as np
 import itertools as it
 from numpy.typing import NDArray
 from environment import Environment
-import traceback
 
 def get_variables(env:Environment):
     """Initiate all variables.
@@ -47,7 +46,7 @@ def check_states(pp:NDArray, action_states:bool = False) -> None:
             print(f'Action {i} has {count} possible states.')
 
 
-def get_matrices(env:Environment, ss, pp, rr):
+def get_matrices(env:Environment, ss:NDArray, pp:NDArray, rr:NDArray):
     """Create probability and reward matrices.
 
     :param env: Class environment. Contains the environment.
@@ -66,16 +65,20 @@ def get_matrices(env:Environment, ss, pp, rr):
             rr[ida, ids] = tot_profit
     return pp, rr
 
-def policy_iteration_and_evaluation(na:int, ns:int, ss:NDArray, rr:NDArray, pp:NDArray, verbose:bool = False):
+def policy_iteration_and_evaluation(na:int, ns:int, ss:NDArray, rr:NDArray,
+                                    pp:NDArray, verbose:bool = False):
     """Perform policy iteration and iterative policy evaluation.
 
     :param na: int. Number of possible actions.
     :param ns: int. Number of possible states.
     :param ss: np.array of shape (ns,ns). Contains all state spaces.
-    :param rr: np.array of shape (na,ns). Contains the rewards for action spaces.
-    :param pp: np.array of shape (na, ns, ns). Contains probabilities of the next state
+    :param rr: np.array of shape (na,ns). Contains the rewards for
+        action spaces.
+    :param pp: np.array of shape (na, ns, ns). Contains probabilities
+        of the next state
         given the current action and state.
-    :param verbose: bool. Whether to track model progress while running. Default = False.
+    :param verbose: bool. Whether to track model progress while running.
+        Default = False.
     :return: best policy, np.array of shape (ns).
     """
 
@@ -86,7 +89,8 @@ def policy_iteration_and_evaluation(na:int, ns:int, ss:NDArray, rr:NDArray, pp:N
     n_iter_pi = 0
 
     while policy_not_stable:
-        v, n_iter_ipe = iterative_policy_evaluation(ss, pi, na, v, rr, pp, gamma)
+        v, n_iter_ipe = iterative_policy_evaluation(ss, pi, na, v,
+                                                    rr, pp, gamma)
         policy_not_stable, pi = policy_improvement(pi,v,rr,pp,ns,na,ss)
         n_iter_pi += 1
         if verbose:
@@ -263,6 +267,9 @@ def run_ipe_and_pi(env:Environment):
     :return: policy, profit, waste, fill rate
     """
 
+    temp = env.sim_length
+    env.sim_length = 1
+
     print('=====PROGRESS IPE+PI=====')
     print('0%')
     ss, ns, na, rr, pp = get_variables(env)
@@ -271,6 +278,8 @@ def run_ipe_and_pi(env:Environment):
     print('50%')
     pi = policy_iteration_and_evaluation(na,ns,ss,rr,pp)
     print('70%')
+    env.sim_length = temp
+    env.reset()
     profit, waste, fill_rate = run_dp_model(env, pi, ss)
     print('100')
     print('=====END IPE+PI=====\n')
@@ -283,7 +292,10 @@ def run_vi(env:Environment):
     :return: policy, profit, waste, fill rate
     """
 
-    print('=====PROGRESS IPE+PI=====')
+    temp = env.sim_length
+    env.sim_length = 1
+
+    print('=====PROGRESS VI=====')
     print('0%')
     ss, ns, na, rr, pp = get_variables(env)
     print('20%')
@@ -291,7 +303,9 @@ def run_vi(env:Environment):
     print('40%')
     pi = value_iteration(na,ns,ss,rr,pp)
     print('70%')
+    env.sim_length = temp
+    env.reset()
     profit, waste, fill_rate = run_dp_model(env, pi, ss)
     print('100%')
-    print('=====END IPE+PI=====\n')
+    print('=====END VI=====\n')
     return pi, profit, waste, fill_rate
