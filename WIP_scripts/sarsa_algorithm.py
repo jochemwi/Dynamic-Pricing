@@ -3,7 +3,7 @@ import random
 from math import ceil
 import matplotlib.pyplot as plt
 
-from environment import Environment
+from scripts.environment import Environment
 
 
 def epsilon_greedy_action(q_value, epsilon, n_actions):

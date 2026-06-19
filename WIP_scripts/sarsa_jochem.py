@@ -3,7 +3,7 @@ import random
 from math import ceil
 import matplotlib.pyplot as plt
 
-from environment import Environment
+from scripts.environment import Environment
 
 
 def sarsa(epsilon, gamma, alpha, decay, epsilon_min, episodes, enviroment):
