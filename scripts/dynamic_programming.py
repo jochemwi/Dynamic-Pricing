@@ -283,7 +283,7 @@ def run_ipe_and_pi(env:Environment):
     profit, waste, fill_rate = run_dp_model(env, pi, ss)
     print('100')
     print('=====END IPE+PI=====\n')
-    return pi, profit, waste, fill_rate
+    return profit, waste, fill_rate
 
 def run_vi(env:Environment):
     """Run value Iteration.
@@ -308,4 +308,4 @@ def run_vi(env:Environment):
     profit, waste, fill_rate = run_dp_model(env, pi, ss)
     print('100%')
     print('=====END VI=====\n')
-    return pi, profit, waste, fill_rate
+    return profit, waste, fill_rate
