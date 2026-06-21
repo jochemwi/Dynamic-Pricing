@@ -1,26 +1,29 @@
 import time
 import pandas as pd
-from scripts.environment import Environment
-# from Q_learning_algorithm import run_q_learning
-# from sarsa_algorithm import run_sarsa
-import dynamic_programming as dp
 from math import sqrt
 
-# settings = [
-#     (5, 3, 3),
-#     (5, 6, 0),
-#     (5, 9, 0),
-#     (6, 3, 3),
-#     (7, 3, 3),
-# ]
+from environment import Environment
+from Q_learning_algorithm import run_q_learning
+from sarsa_algorithm import run_sarsa
+import dynamic_programming as dp
 
-settings = [(5, 3, 1/sqrt(3))]
+
+settings = [
+    (3, 2, 1/sqrt(2)),    # 7^3   =       343 states
+    (5, 3, 1/sqrt(3)),    # 9^5   =    59,049 states
+    (5, 5, 0),            # 11^5  =   161,051 states
+    (6, 3, 1/sqrt(3)),    # 9^6   =   531,441 states
+    (5, 7, 0),            # 15^5  =   759,375 states
+]
+
+
+rl_kwargs = dict(episodes=10_000, convergence_tol=0.01, convergence_patience=3)
 
 methods = {
-    'Policy iteration': dp.run_ipe_and_pi,
-    'Value iteration':  dp.run_vi,
-    # 'Q-learning':       run_q_learning,
-    # 'Sarsa':            run_sarsa,
+    'Policy iteration': (dp.run_ipe_and_pi, {}),
+    'Value iteration':  (dp.run_vi,          {}),
+    'Q-learning':       (run_q_learning,     rl_kwargs),
+    'Sarsa':            (run_sarsa,          rl_kwargs),
 }
 
 repetitions = 2
@@ -28,13 +31,16 @@ results = []
 
 for M, mu, z in settings:
     env = Environment(max_shelf_life=M, mu=mu, z=z)
-
-    for method_name, run_method in methods.items():
+    
+    for method_name, (run_method, kwargs) in methods.items():
         for rep in range(repetitions):
-            env.reset()
+            if method_name in ('Policy iteration', 'Value iteration'):
+                env.reset()
             start = time.perf_counter()
-            policy, profit, waste, fill_rate = run_method(env)
+            result = run_method(env, **kwargs, **({'train_seed': rep} if kwargs else {}))
             elapsed = time.perf_counter() - start
+            profit, waste, fill_rate = result[:3]
+            iterations = result[3] if len(result) > 3 else None
             results.append({
                 'M': M,
                 'mu': mu,
@@ -42,10 +48,9 @@ for M, mu, z in settings:
                 'method': method_name,
                 'rep': rep + 1,
                 'time': elapsed,
+                'iterations': iterations,
                 'profit': profit,
                 'waste' : waste,
                 'fill_rate' : fill_rate,
             })
-
-results_df = pd.DataFrame(results)
-results_df.to_csv('../data/timemeasurements.csv')
+            pd.DataFrame(results).to_csv('./data/timemeasurements.csv')
