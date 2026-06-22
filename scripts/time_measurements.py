@@ -17,7 +17,7 @@ settings = [
 ]
 
 
-rl_kwargs = dict(episodes=10_000, convergence_tol=0.01, convergence_patience=3)
+rl_kwargs = {'episodes': 10_000, 'convergence_tol': 0.01, 'convergence_patience': 3}
 
 methods = {
     'Policy iteration': (dp.run_ipe_and_pi, {}),
@@ -37,7 +37,10 @@ for M, mu, z in settings:
             if method_name in ('Policy iteration', 'Value iteration'):
                 env.reset()
             start = time.perf_counter()
-            result = run_method(env, **kwargs, **({'train_seed': rep} if kwargs else {}))
+            if kwargs:
+                result = run_method(env, **kwargs, train_seed=rep)
+            else:
+                result = run_method(env)
             elapsed = time.perf_counter() - start
             profit, waste, fill_rate = result[:3]
             iterations = result[3] if len(result) > 3 else None
