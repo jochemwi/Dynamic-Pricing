@@ -232,6 +232,7 @@ def value_iteration(na:int, ns:int, ss:NDArray, rr:NDArray, pp:NDArray,
 
     pi = np.random.choice(np.arange(na), ns)
     v= np.zeros(ns)
+    theta = 0
     n_iter_vi = 0
     stop = False
     kk = 0
