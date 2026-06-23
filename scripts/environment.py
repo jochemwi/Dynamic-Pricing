@@ -312,18 +312,34 @@ class Environment():
         Ilist.reverse()
         return np.array(Ilist)
 
-    def plot_env_results(self, profit):
+    def plot_env_results(self, profit, waste):
         '''Plot profit against discount percentage for fixed last-day discounting.
 
-        :param profit: array-like, profit value for each discount level
+        :param profit: array-like, profit value for each discount level.
+        :param waste: array-like, waste for each discount level.
         :return: None
         '''
         step = self.discount * 100
-        plt.plot(step * np.arange(self.discount_levels), profit,  marker='o')
-        plt.title("Fixed last-day discounting")
-        plt.xlabel("discount %")
-        plt.ylabel("profit")
-        plt.grid(True)
+        x = step * np.arange(self.discount_levels)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        fig.suptitle("Fixed last-day discounting", fontsize=14, fontweight='bold')
+
+        # Left plot: discount vs. profit
+        ax1.plot(x, profit, marker='o', color='steelblue')
+        ax1.set_title('Profit')
+        ax1.set_xlabel('Discount %')
+        ax1.set_ylabel('Profit (cent)')
+        ax1.grid(True)
+
+        # Right plot: discount vs. waste
+        ax2.plot(x, waste, marker='o', color='darkorange')
+        ax2.set_title('Waste')
+        ax2.set_xlabel('Discount %')
+        ax2.set_ylabel('Waste (units)')
+        ax2.grid(True)
+
+        plt.tight_layout()
         plt.show()
 
     def __repr__(self):

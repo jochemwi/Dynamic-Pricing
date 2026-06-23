@@ -9,7 +9,7 @@ import dynamic_programming as dp
 
 
 settings = [
-    (3, 2, 1/sqrt(2)),    # 7^3   =       343 states
+    (3, 2, 1/sqrt(3)),    # 7^3   =       343 states
     (5, 3, 1/sqrt(3)),    # 9^5   =    59,049 states
     (5, 5, 0),            # 11^5  =   161,051 states
     (6, 3, 1/sqrt(3)),    # 9^6   =   531,441 states
@@ -53,4 +53,4 @@ for M, mu, z in settings:
                 'waste' : waste,
                 'fill_rate' : fill_rate,
             })
-            pd.DataFrame(results).to_csv('./data/timemeasurements.csv')
+            pd.DataFrame(results).to_csv('../data/timemeasurements_check.csv')

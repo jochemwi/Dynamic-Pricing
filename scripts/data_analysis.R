@@ -262,8 +262,11 @@ plot(time ~ M,
      xlab = 'M',
      ylab = 'Time (min)',
      main = 'Time vs. M by method (mu = 5)',
+     xaxt = 'n',
      pch = 19,
      col = method_colours[as.character(df_mu3$method)])
+
+axis(1, at = c(5, 6))
 
 for (m in method_levels){
   d <- df_mu3[df_mu3$method == m, ]
