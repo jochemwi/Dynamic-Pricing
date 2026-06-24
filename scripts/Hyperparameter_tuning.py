@@ -50,8 +50,8 @@ for a in alpha_list:
                 })
 
             # save incrementally in case of crash
-            pd.DataFrame(summary_rows).to_csv(f'./data/hyperparameter_tuning_test.csv', index=False)
-            pd.DataFrame(long_rows).to_csv(f'./datahyperparameter_tuning_test.csv', index=False)
+            pd.DataFrame(summary_rows).to_csv(f'./data/hyperparameter_tuning_SARSA.csv', index=False)
+            pd.DataFrame(long_rows).to_csv(f'./data/hyperparameter_tuning_SARSA.csv', index=False)
 
 print("Finished SARSA")
 
@@ -103,8 +103,8 @@ for a in alpha_list:
                 })
 
             # save incrementally in case of crash
-            pd.DataFrame(summary_rows).to_csv(f'./hyperparameter_tuning_Q_learning.csv', index=False)
-            pd.DataFrame(long_rows).to_csv(f'./hyperparameter_tuning_long_Q_learning.csv', index=False)
+            pd.DataFrame(summary_rows).to_csv(f'./data/hyperparameter_tuning_Q_learning.csv', index=False)
+            pd.DataFrame(long_rows).to_csv(f'./data/hyperparameter_tuning_long_Q_learning.csv', index=False)
 
 print("Finished Q-learning")
 
