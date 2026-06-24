@@ -1,18 +1,51 @@
-# set wd
-setwd("~/Wageningen University/Period 2/Advanced bioinformatics/Dynamic-Pricing/data")
+# =============================================================================
+# Author:      Chris Ambagtsheer (student number: 1216414), 
+#  Jochem Widdershoven (student number: )
+# Date:        24/06/2026
+# Description: Create analysis figures for the model output data. 
+# Usage:       Rscript data_analysis.R [model_output_file] [control_output_file]
+#   Where:
+#     model_output_file = file path to model output (optional, default =
+#   "timemeasurements_check.csv")
+#     control_output_file = file path to control output (optional, default = 
+#   "timemeasurements_control.csv")
+# =============================================================================
+
+args <- commandArgs(trailingOnly = TRUE)
+
+if (length(args) == 0){
+  model_data = "timemeasurements_check.csv"
+  control_data = "timemeasurements_control.csv"
+} else if (length(args) == 2) {
+  model_data = args[1]
+  control_data = args[2]
+  
+} else {
+  stop("Usage: Rscript data_analysis.R [model_output_file] [control_output_file]")
+}
+
+# open the data folder for analysis
+setwd("./data/")
 
 # load libraries
-library(ggplot2) 
-library(dplyr)
-library(ttservice)
-library(emmeans)
-library(RColorBrewer)
-library(dplyr)
-library(multcompView)
+lib_path <- "./R/library"
+if (!dir.exists(lib_path)) dir.create(lib_path, recursive = TRUE)
+.libPaths(lib_path)
+
+packages <- c("ggplot2", "dplyr", "patchwork", "pheatmap", "RColorBrewer", "readxl", "multcompView")
+
+for (pkg in packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, 
+                     repos   = "https://cloud.r-project.org",
+                     lib     = lib_path)
+    library(pkg, character.only = TRUE, lib.loc = lib_path)
+  }
+}
 
 # load data
-df_check <- read.csv("timemeasurements_check1.csv", row.names = 1)
-df_ctrl <- read.csv("timemeasurements_control.csv", row.names = 1)
+df_check <- read.csv(model_data, row.names = 1)
+df_ctrl <- read.csv(control_data, row.names = 1)
 df_ctrl$method = 'Ctrl'
 df <- bind_rows(df_check, df_ctrl)
 
@@ -21,46 +54,10 @@ df$M <- factor(df$M)
 df$method <- factor(df$method)
 levels(df$method) <- gsub("-", "_", levels(df$method))
 
-# prepare data
-colnames(df)
-df_sel = df[,-4]
-df_sel$iterations = log10(df$iterations)
-df_sel$time = log10(df$time)
-
 # assign the method labels a colour.
 method_levels <- levels(df$method)
 method_colours <- brewer.pal(n = length(method_levels), 'RdYlBu')
 names(method_colours) = method_levels
-
-# plot out all variables 
-par(mfrow = c(1, ncol(df_sel)),
-    oma = c(4,0,0,0))
-
-for (i in 1:ncol(df_sel)){
-  df_name = colnames(df_sel)[i]
-  
-  if (df_name == 'iterations'){
-    ylab = 'log10(iter)'
-  }
-  else{
-    if (df_name == 'time'){
-      ylab = 'log10(time)'
-    }
-    else{
-      ylab = df_name
-    }
-  }
-  
-  boxplot(df_sel[,i] ~ df$method,
-          data = df,
-          col = rep(method_colours[method_levels], n = ncol(df_sel)),
-          main = df_name,
-          las = 2,
-          ylab = ylab,
-          xlab = NA)
-}
-
-dev.off()
 
 # define the formula; replicates is random effect, the others are 
 # fixed effect
@@ -72,6 +69,8 @@ summary(fit_profit)
 #################
 
 #### PROFIT ####
+jpeg(filename = 'effect_m_mu_profit.jpeg', width = 1178, height = 1208, res = 192)
+
 par(mfrow = c(2,2), oma = c(4, 1, 2, 0))
 mu_levels = sort(unique(df$mu))
 
@@ -123,6 +122,8 @@ mtext('Effect of mu and M on profit', outer = TRUE, line = 0)
 dev.off()
 
 ### WASTE ###
+jpeg(filename = 'effect_m_mu_waste.jpeg', width = 1178, height = 1208, res = 192)
+
 par(mfrow = c(2,2), oma = c(4, 1, 2, 0))
 
 for (i in mu_levels){
@@ -133,7 +134,7 @@ for (i in mu_levels){
   d$grp <- interaction(d$method, d$M)
   
   # Fit ANOVA on this subset, run Tukey HSD post-hoc
-  fit_i <- aov(profit ~ grp, data = d)
+  fit_i <- aov(waste ~ grp, data = d)
   tuk_i <- TukeyHSD(fit_i)
   
   # Get compact letter display
@@ -173,6 +174,8 @@ mtext('Effect of mu and M on waste', outer = TRUE, line = 0)
 dev.off()
 
 ### TIME ###
+jpeg(filename = 'effect_m_mu_time.jpeg', width = 1178, height = 1208, res = 192)
+
 par(mfrow = c(2,2), oma = c(4, 1, 2, 0))
 for (i in mu_levels){
   
@@ -226,6 +229,8 @@ dev.off()
 #############
 
 ### Time vs mu ###
+jpeg(filename = 'time_vs_mu_method.jpeg', width = 1178, height = 1208, res = 192)
+
 df_M5 <- df[df$M == 'M5',]
 
 # 1. Define which methods get which shapes
@@ -247,7 +252,7 @@ ggplot(df, aes(x = mu, y = time, color = method, group = method)) +
               method = "lm",
               formula = y ~ poly(x, 3), 
               linewidth = 2,
-              se = FALSE) +
+              se = TRUE) +
   
   scale_color_manual(values = method_colours) +
   labs(
@@ -257,7 +262,11 @@ ggplot(df, aes(x = mu, y = time, color = method, group = method)) +
     color = "Method"
   )
 
+dev.off()
+
 ### Time vs M ###
+jpeg(filename = 'time_vs_m_method.jpeg', width = 1178, height = 1208, res = 192)
+
 df_mu3 <- df[df$mu == 3,]
 df_mu3$M <- as.numeric(gsub("M", "", as.character(df_mu3$M)))
 
@@ -275,8 +284,11 @@ ggplot(df_mu3,
        color = 'Method') + 
   scale_x_continuous(breaks = c(5, 6))
 
+dev.off()
+
 ### waste vs. fill_rate ### 
-library(ggplot2)
+jpeg(filename = 'profit_vs_waste_method.jpeg', width = 1178, height = 1208, res = 192)
+
 ggplot(df, 
        aes(x = profit, y = waste, group = method, color = method)) + 
   geom_point(size = 3) +
@@ -290,7 +302,11 @@ ggplot(df,
        y = 'Waste (proportion)',
        color = 'Method')
 
+dev.off()
+
 ### fill_rate vs waste ###
+jpeg(filename = 'fillrate_vs_waste_method.jpeg', width = 1178, height = 1208, res = 192)
+
 ggplot(df, 
        aes(x = fill_rate, y = waste, group = method, color = method)) + 
   geom_point(size = 3) +
@@ -304,7 +320,11 @@ ggplot(df,
        y = 'Waste (proportion)',
        color = 'Method')
 
+dev.off()
+
 ### FDC ###
+jpeg(filename = 'discount_vs_profit_fdc.jpeg', width = 1178, height = 1208, res = 192)
+
 fdc <- read.csv("fdc_profit_waste.csv", header = TRUE)
 ggplot(fdc, 
        aes(x = 0.05 * 0:10, y = profit, color = 'FDC')) + 
@@ -318,7 +338,11 @@ ggplot(fdc,
        y = 'Profit (cent)',
        color = 'Method')
 
+dev.off()
+
 # discount vs waste
+jpeg(filename = 'discount_vs_waste_fdc.jpeg', width = 1178, height = 1208, res = 192)
+
 ggplot(fdc, 
        aes(x = 0.05 * 0:10, y = waste, color = 'FDC')) + 
   geom_point(size = 3) +
@@ -330,4 +354,6 @@ ggplot(fdc,
        x = 'Discount %',
        y = 'Waste (proportion)',
        color = 'Method')
+
+dev.off()
 

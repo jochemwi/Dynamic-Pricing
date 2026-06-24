@@ -20,7 +20,7 @@ def get_variables(env:Environment):
 
     na = env.discount_levels
 
-    rr = np.zeros([na, ns])
+    rr = np.zeros([ns, na])
     pp = np.zeros([na, ns, ns])
     return ss, ns, na, rr, pp
 
@@ -62,7 +62,7 @@ def get_matrices(env:Environment, ss:NDArray, pp:NDArray, rr:NDArray):
         env.reset()
         for ids, s in enumerate(ss):
             pp, tot_profit = env.get_probability_matrix(ss,pp,s,ida,ids,a)
-            rr[ida, ids] = tot_profit
+            rr[ids, ida] = tot_profit
     return pp, rr
 
 def policy_iteration_and_evaluation(na:int, ns:int, ss:NDArray, rr:NDArray,
@@ -125,7 +125,7 @@ def iterative_policy_evaluation(ss:NDArray, pi:NDArray, na:int, v:NDArray,
         for ids, s in enumerate(ss):
             a = pi[ids]
             ida = np.where(np.arange(na) == a)[0][0]
-            v[ids] = rr[ida, ids] + gamma * pp[ida, ids, :] @ v_prev
+            v[ids] = rr[ids, ida] + gamma * pp[ida, ids, :] @ v_prev
 
         diff = v - v_prev
         span = max(diff) - min(diff)
@@ -152,17 +152,17 @@ def policy_improvement(pi:NDArray, v:NDArray, rr:NDArray, pp:NDArray,
         that contains the best policy.
     """
 
-    q = np.zeros([na, ns])
+    q = np.zeros([ns, na])
 
     pi_prev= pi.copy()
     policy_not_stable = False
     for ids, s in enumerate(ss):
         q_best = - np.inf
         for ida, a in enumerate(np.arange(na)):
-            q[ida, ids] = rr[ida, ids] + gamma * pp[ida, ids, :] @ v
-            if q[ida, ids] > q_best:
+            q[ids, ida] = rr[ids, ida] + gamma * pp[ida, ids, :] @ v
+            if q[ids, ida] > q_best:
                 pi[ids] = a
-                q_best = q[ida, ids]
+                q_best = q[ids, ida]
         if pi[ids] != pi_prev[ids]:
             policy_not_stable = True
     return policy_not_stable, pi
@@ -248,7 +248,7 @@ def value_iteration(na:int, ns:int, ss:NDArray, rr:NDArray, pp:NDArray,
             v_best = -99999
 
             for ida, a in enumerate(np.arange(na)):
-                v_try = rr[ida,ids] + gamma * pp[ida, ids, :] @ v
+                v_try = rr[ids,ida] + gamma * pp[ida, ids, :] @ v
                 if v_try > v_best:
                     v_best = v_try
                     pi[ids] = a
