@@ -63,7 +63,7 @@ def sarsa_with_eval(epsilon, gamma, alpha, decay, epsilon_min, episodes, envirom
         if converged:
             break
 
-    return q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate, step
+    return q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate
 
 
 def greedy_eval_reward(q_table, enviroment, eval_seed=999):
