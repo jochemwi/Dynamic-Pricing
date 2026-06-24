@@ -172,7 +172,7 @@ def main():
         ctrl_file = argv[2]
 
     settings, methods, rlkwargs = get_variables()
-    #create_output(settings, methods, rlkwargs, file)
+    create_output(settings, methods, rlkwargs, file)
     create_ctrl_output(settings, ctrl_file)
     print('done')
 
