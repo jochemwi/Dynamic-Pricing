@@ -2,16 +2,16 @@
 setwd("~/Wageningen University/Period 2/Advanced bioinformatics/Dynamic-Pricing/data")
 
 # load libraries
-library(lme4)
-library(lmerTest)  
+library(ggplot2) 
 library(dplyr)
 library(ttservice)
 library(emmeans)
 library(RColorBrewer)
 library(dplyr)
+library(multcompView)
 
 # load data
-df_check <- read.csv("timemeasurements_check.csv", row.names = 1)
+df_check <- read.csv("timemeasurements_check1.csv", row.names = 1)
 df_ctrl <- read.csv("timemeasurements_control.csv", row.names = 1)
 df_ctrl$method = 'Ctrl'
 df <- bind_rows(df_check, df_ctrl)
@@ -72,10 +72,8 @@ summary(fit_profit)
 #################
 
 #### PROFIT ####
-library(multcompView)
-
 par(mfrow = c(2,2), oma = c(4, 1, 2, 0))
-mu_levels = unique(df$mu)
+mu_levels = sort(unique(df$mu))
 
 for (i in mu_levels){
   
@@ -96,7 +94,7 @@ for (i in mu_levels){
   bp <- boxplot(profit ~ grp, 
                 data = d,
                 las = 2,
-                cex.axis = 0.6,
+                cex.axis = 0.5,
                 xlab = NA, 
                 ylim = c(min(d$profit) - 2, max(d$profit) + 2),
                 ylab = ifelse(i == 2 || i == 5, 'Profit (cents)', NA),
@@ -146,7 +144,7 @@ for (i in mu_levels){
   bp <- boxplot(waste ~ grp, 
                 data = d,
                 las = 2,
-                cex.axis = 0.6,
+                cex.axis = 0.5,
                 xlab = NA, 
                 ylim = c(min(d$waste) - 0.1 * min(d$waste), max(d$waste) + 0.1 * max(d$waste)),
                 ylab = ifelse(i == 2 || i == 5, 'Waste (proportion)', NA),
@@ -195,7 +193,7 @@ for (i in mu_levels){
   bp <- boxplot(time ~ grp, 
                 data = d,
                 las = 2,
-                cex.axis = 0.6,
+                cex.axis = 0.5,
                 xlab = NA, 
                 ylim = c(min(d$time) - 2, max(d$time) + 0.2 * max(d$time)),
                 ylab = ifelse(i == 2 || i == 5, 'Time (sec)', NA),
@@ -228,103 +226,108 @@ dev.off()
 #############
 
 ### Time vs mu ###
-
 df_M5 <- df[df$M == 'M5',]
 
-plot(time ~ mu,
-     data = df_M5,
-     xlab = 'mu',
-     ylab = 'Time (min)',
-     main = 'Time vs. mu by method (M = 5)',
-     pch = 19,
-     col = method_colours[as.character(df_M5$method)])
+# 1. Define which methods get which shapes
+poly_methods   <- c("Policy iteration", "Value iteration") 
+linear_methods <- setdiff(unique(df$method), poly_methods)
 
-for (m in method_levels){
-  d <- df_M5[df_M5$method == m, ]
-  loess_fit <- loess(time ~ mu, data = d, span = 0.75)
+ggplot(df, aes(x = mu, y = time, color = method, group = method)) + 
+  geom_point(size = 3) + 
   
-  x_grid <- seq(min(d$mu), max(d$mu), length.out = 200)
-  y_pred <- predict(loess_fit, newdata = data.frame(mu = x_grid))
+  # Layer 1: Linear fit for the two linear methods
+  stat_smooth(data = subset(df, method %in% linear_methods),
+              method = "lm",
+              formula = y ~ x,
+              linewidth = 2,
+              se = TRUE) +
   
-  lines(x = x_grid, y = y_pred, col = method_colours[m], lwd = 2)
-}
-
-legend('topleft', legend = method_levels, 
-       col = method_colours[method_levels], 
-       pch = 19, lwd = 2)
+  # Layer 2: Polynomial-like curve for the two 3-point methods
+  stat_smooth(data = subset(df, method %in% poly_methods),
+              method = "lm",
+              formula = y ~ poly(x, 3), 
+              linewidth = 2,
+              se = FALSE) +
+  
+  scale_color_manual(values = method_colours) +
+  labs(
+    title = "Time vs. mu by method (M = 5)",
+    x = "mu",
+    y = "Time (sec)",
+    color = "Method"
+  )
 
 ### Time vs M ###
 df_mu3 <- df[df$mu == 3,]
 df_mu3$M <- as.numeric(gsub("M", "", as.character(df_mu3$M)))
 
-plot(time ~ M,
-     data = df_mu3,
-     xlab = 'M',
-     ylab = 'Time (min)',
-     main = 'Time vs. M by method (mu = 5)',
-     xaxt = 'n',
-     pch = 19,
-     col = method_colours[as.character(df_mu3$method)])
+ggplot(df_mu3, 
+       aes(x = M, y = time, group = method, color = method)) + 
+  geom_point(size = 3) +
+  stat_smooth(method = "lm",
+              formula = y ~ x,
+              linewidth = 2,          
+              se = TRUE) +
+  scale_color_manual(values = method_colours) + 
+  labs(title = 'M vs. time by method (mu = 3)',
+       x = 'M',
+       y = 'Time (sec)',
+       color = 'Method') + 
+  scale_x_continuous(breaks = c(5, 6))
 
-axis(1, at = c(5, 6))
-
-for (m in method_levels){
-  d <- df_mu3[df_mu3$method == m, ]
-  lm_fit <- lm(time ~ M, data = d)
-  
-  x_grid <- seq(min(d$M), max(d$M), length.out = 200)
-  y_pred <- predict(lm_fit, newdata = data.frame(M = x_grid))
-  
-  lines(x = x_grid, y = y_pred, col = method_colours[m], lwd = 2)
-}
-
-legend('topleft', legend = method_levels, 
-       col = method_colours[method_levels], 
-       pch = 19, lwd = 2)
-
-dev.off()
 ### waste vs. fill_rate ### 
-plot(waste ~ profit,
-     data = df,
-     xlab = 'Profit (cents)',
-     ylab = 'Waste (proportion)',
-     main = 'Profit vs. waste by method',
-     pch = 19,
-     col = method_colours[as.character(df$method)])
-
-for (m in method_levels){
-  d <- df[df$method == m, ]
-  loess_fit <- loess(waste ~ profit, data = d, span = 0.99)
-  
-  x_grid <- seq(min(d$profit), max(d$profit), length.out = 200)
-  y_pred <- predict(loess_fit, newdata = data.frame(profit = x_grid))
-  
-  lines(x = x_grid, y = y_pred, col = method_colours[m], lwd = 2)
-}
-
-legend('topright', legend = method_levels, 
-       col = method_colours[method_levels], 
-       pch = 19, lwd = 2)
+library(ggplot2)
+ggplot(df, 
+       aes(x = profit, y = waste, group = method, color = method)) + 
+  geom_point(size = 3) +
+  stat_smooth(method = "lm",
+            formula = y ~ poly(x, 3),
+            linewidth = 2,           
+            se = TRUE) +
+  scale_color_manual(values = method_colours) + 
+  labs(title = 'Profit vs. waste by method',
+       x = 'Profit (cents)',
+       y = 'Waste (proportion)',
+       color = 'Method')
 
 ### fill_rate vs waste ###
-plot(waste ~ fill_rate,
-     data = df,
-     xlab = 'Fill rate (proportion)',
-     ylab = 'Waste (proportion)',
-     main = 'Fill rate vs. waste by method',
-     pch = 19,
-     col = method_colours[as.character(df$method)])
+ggplot(df, 
+       aes(x = fill_rate, y = waste, group = method, color = method)) + 
+  geom_point(size = 3) +
+  stat_smooth(method = "lm",
+              formula = y ~ poly(x, 3),
+              linewidth = 2,         
+              se = TRUE) +
+  scale_color_manual(values = method_colours) + 
+  labs(title = 'Fill rate vs. waste by method',
+       x = 'Fill rate (cents)',
+       y = 'Waste (proportion)',
+       color = 'Method')
 
-for (m in method_levels){
-  d <- df[df$method == m, ]
-  loess_fit <- loess(waste ~ fill_rate, data = d, span = 0.99)
-  
-  x_grid <- seq(min(d$fill_rate), max(d$fill_rate), length.out = 200)
-  y_pred <- predict(loess_fit, newdata = data.frame(fill_rate = x_grid))
-  
-  lines(x = x_grid, y = y_pred, col = method_colours[m], lwd = 2)
-}
+### FDC ###
+fdc <- read.csv("fdc_profit_waste.csv", header = TRUE)
+ggplot(fdc, 
+       aes(x = 0.05 * 0:10, y = profit, color = 'FDC')) + 
+  geom_point(size = 3) +
+  stat_smooth(method = "lm",
+              formula = y ~ poly(x, 3),
+              linewidth = 2) +
+  scale_color_manual(values = 'forestgreen') +
+  labs(title = 'Discount vs. profit',
+       x = 'Discount %',
+       y = 'Profit (cent)',
+       color = 'Method')
 
-legend('topleft', legend = method_levels, 
-       col = method_colours[method_levels], 
-       pch = 19, lwd = 2)
+# discount vs waste
+ggplot(fdc, 
+       aes(x = 0.05 * 0:10, y = waste, color = 'FDC')) + 
+  geom_point(size = 3) +
+  stat_smooth(method = "lm",
+              formula = y ~ x,
+              linewidth = 2) +
+  scale_color_manual(values = 'purple4') +
+  labs(title = 'Discount vs. waste',
+       x = 'Discount %',
+       y = 'Waste (proportion)',
+       color = 'Method')
+

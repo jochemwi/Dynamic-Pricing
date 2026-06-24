@@ -15,7 +15,7 @@ def epsilon_greedy_action(q_value, epsilon, n_actions):
 
 def sarsa_with_eval(epsilon, gamma, alpha, decay, epsilon_min, episodes, enviroment,
                     eval_every=5000, eval_seed=999, convergence_tol=None, convergence_patience=3):
-    q_table = np.zeros(shape=(ceil(enviroment.UBI + 1) ** enviroment.M, enviroment.discount_levels))
+    q_table = np.zeros(shape=(ceil(enviroment.UBI + 1) ** enviroment.M + 1, enviroment.discount_levels))
     eval_steps, eval_rewards, eval_waste, eval_fill_rate = [], [], [], []
     step = 0
     converged = False

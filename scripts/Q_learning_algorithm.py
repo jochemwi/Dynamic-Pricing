@@ -9,7 +9,7 @@ from environment import Environment
 def q_learning_with_eval(epsilon, gamma, alpha, decay, epsilon_min, episodes, enviroment,
                           eval_every=5000, eval_seed=999, convergence_tol=None, convergence_patience=3):
     # initialise empty Q-table
-    q_table = np.zeros(shape=(ceil(enviroment.UBI + 1) ** enviroment.M, enviroment.discount_levels))
+    q_table = np.zeros(shape=(ceil(enviroment.UBI + 1) ** enviroment.M + 1, enviroment.discount_levels))
     # initialise empty list for eval_steps and rewards used for evaluation
     eval_steps, eval_rewards, eval_waste, eval_fill_rate = [], [], [], []
     # initialise steps at 0
