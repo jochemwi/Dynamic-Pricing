@@ -102,7 +102,7 @@ def run_q_learning(env, episodes=3, eval_every=5000, eval_seed=2,
     if train_seed is not None:
         random.seed(train_seed)
         np.random.seed(train_seed)
-    q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate, total_steps = q_learning_with_eval(
+    _, _, eval_rewards, eval_waste, eval_fill_rate, total_steps = q_learning_with_eval(
         epsilon=epsilon, gamma=gamma, alpha=alpha, decay=decay, epsilon_min=epsilon_min,
         episodes=episodes, enviroment=env, eval_every=eval_every, eval_seed=eval_seed,
         convergence_tol=convergence_tol, convergence_patience=convergence_patience,
