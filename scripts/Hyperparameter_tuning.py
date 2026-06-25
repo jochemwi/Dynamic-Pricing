@@ -69,7 +69,7 @@ def run_tuning(run_algorithm, name):
 
     print(f"Finished {name}")
 
-
+# run the tuning
 for run_algorithm, name in [(sarsa_with_eval, 'SARSA'), (q_learning_with_eval, 'Q_learning')]:
     print(f"Start {name}")
     run_tuning(run_algorithm, name)
