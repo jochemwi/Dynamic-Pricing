@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Authors: Chris Ambagtsheer (student number: 1216414),
-    Jochem Widdershoven (student number: )
+    Jochem Widdershoven (student number: 1598228)
 Description: Customers prefer products as fresh as possible, so older
     products are eventually thrown out. To improve profit and reduce waste,
     the prices of the oldest products could be reduced by a discount.
