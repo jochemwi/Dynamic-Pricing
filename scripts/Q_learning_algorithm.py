@@ -112,16 +112,3 @@ def run_q_learning(env, episodes=3, eval_every=5000, eval_seed=2,
     waste = np.mean(eval_waste[-5:])
     fill_rate = np.mean(eval_fill_rate[-5:])
     return profit, waste, fill_rate, total_steps
-
-# env = Environment(seed=1)
-# q_table, eval_steps, eval_rewards, eval_waste, eval_fill_rate  = q_learning_with_eval(
-#     epsilon=1, gamma=0.9, alpha=0.1, decay=0.9999, epsilon_min=0.05,
-#     episodes=3, enviroment=env, eval_every=5000, eval_seed=2)
-# print(f"profit: {round(np.mean(eval_rewards[-5:]), 3)}", f"waste: {round(np.mean(eval_waste[-5:]) * 100, 1)}%", f"fillrate: {round(np.mean(eval_fill_rate[-5:]) * 100, 1)}%" )
-
-# plt.plot(eval_steps, eval_rewards, marker='o')
-# plt.xlabel("Training step")
-# plt.ylabel("Greedy eval reward (mean profit/step)")
-# plt.title("Q-learning evaluation curve")
-# plt.grid(True)
-# plt.show()

@@ -1,6 +1,6 @@
 # =============================================================================
-# Author:      Chris Ambagtsheer (student number: 1216414), 
-#  Jochem Widdershoven (student number: )
+# Author:       Chris Ambagtsheer (student number: 1216414), 
+#               Jochem Widdershoven (student number: 1598228)
 # Date:        24/06/2026
 # Description: Create analysis figures for the model output data. 
 # Usage:       Rscript data_analysis.R [model_output_file] [control_output_file]
