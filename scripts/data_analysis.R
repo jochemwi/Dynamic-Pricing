@@ -3,29 +3,25 @@
 #               Jochem Widdershoven (student number: 1598228)
 # Date:        24/06/2026
 # Description: Create analysis figures for the model output data. 
-# Usage:       Rscript data_analysis.R [model_output_file] [control_output_file]
+# Usage:       Rscript data_analysis.R [output_dir]
 #   Where:
-#     model_output_file = file path to model output (optional, default =
-#   "timemeasurements_check.csv")
-#     control_output_file = file path to control output (optional, default = 
-#   "timemeasurements_control.csv")
+#     Rscript = R program to run the script.
+#     data_analysis.R = this script. 
+#     output_dir = optional, output directory. Default = ./data
 # =============================================================================
 
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) == 0){
-  model_data = "timemeasurements_check.csv"
-  control_data = "timemeasurements_control.csv"
-} else if (length(args) == 2) {
-  model_data = args[1]
-  control_data = args[2]
-  
+  output_dir = './data'
+} else if (length(args) == 1) {
+  output_dir = args[1]
 } else {
-  stop("Usage: Rscript data_analysis.R [model_output_file] [control_output_file]")
+  stop("Usage: Rscript data_analysis.R [output_dir")
 }
 
 # open the data folder for analysis
-setwd("./data/")
+setwd(output_dir)
 
 # load libraries
 lib_path <- "./R/library"
@@ -44,8 +40,8 @@ for (pkg in packages) {
 }
 
 # load data
-df_check <- read.csv(model_data, row.names = 1)
-df_ctrl <- read.csv(control_data, row.names = 1)
+df_check <- read.csv("timemeasurements_check.csv", row.names = 1)
+df_ctrl <- read.csv("timemeasurements_control.csv", row.names = 1)
 df_ctrl$method = 'Ctrl'
 df <- bind_rows(df_check, df_ctrl)
 

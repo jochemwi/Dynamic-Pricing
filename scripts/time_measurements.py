@@ -13,16 +13,12 @@ Description: Customers prefer products as fresh as possible, so older
     The data is generated for each run, where the next states are computed
     using the previous state and action. The customer behaviour is taken
     into account within the reward function.
-Usage: python time_measurements.py [model_output_file] [ctrl_output_file]
+Usage: python time_measurements.py [out_dir]
     Where:
-        python = python 3.0+ (program),
-        time_measurements.py = this script,
-        model_output_file = optional file name for output models, default =
-            "./data/timemeasurements_check.csv"
-        ctrl_output_file = optional file name for output fixed discount control.
-            default = ".data/timemeasurements_control.csv"
+        python = python 3.0+ (program).
+        time_measurements.py = this script.
+        out_dit = optional, data directory to save output in.
 """
-
 
 # import statements
 import time
@@ -33,6 +29,7 @@ from Q_learning_algorithm import run_q_learning
 from sarsa_algorithm import run_sarsa
 import dynamic_programming as dp
 from sys import argv
+from pathlib import Path
 
 def get_variables():
     '''Create dataframes with settings to run on as well as the models.
@@ -58,18 +55,14 @@ def get_variables():
         'Sarsa': (run_sarsa, rl_kwargs),
     }
 
-    return settings, methods, rl_kwargs
+    return settings, methods
 
-def create_output(settings, methods, rlkwargs,
-                  file = './data/timemeasurements_check.csv'):
+def create_output(settings, methods, out_dir):
     '''Create a file with the model's output.
 
     :param settings: contains the model's settings, pd.dataframe.
     :param methods: contains the methods to evaluate, pd.dataframe.
-    :param rlkwargs: contains the parameters for reinforcement learning,
-        pd.dataframe.
-    :param file: contains the file to save the output in, default =
-        '../data/timemeasurements_check.csv'
+    :param out_dir: Path. Output directory.
     :return: None
     '''
 
@@ -79,13 +72,13 @@ def create_output(settings, methods, rlkwargs,
     for M, mu, z in settings:
         env = Environment(max_shelf_life=M, mu=mu, z=z)
 
-        for method_name, (run_method, kwargs) in methods.items():
+        for method_name, (run_method, rl_kwargs) in methods.items():
             for rep in range(repetitions):
                 if method_name in ('Policy iteration', 'Value iteration'):
                     env.reset()
                 start = time.perf_counter()
-                if kwargs:
-                    result = run_method(env, **kwargs, train_seed=rep)
+                if rl_kwargs:
+                    result = run_method(env, **rl_kwargs, train_seed=rep)
                 else:
                     result = run_method(env)
                 elapsed = time.perf_counter() - start
@@ -103,13 +96,14 @@ def create_output(settings, methods, rlkwargs,
                     'waste': waste,
                     'fill_rate': fill_rate,
                 })
-                pd.DataFrame(results).to_csv(file)
+                (pd.DataFrame(results).
+                 to_csv(out_dir / 'timemeasurements_check.csv', index = False))
 
-def create_ctrl_output(settings, file = './data/timemeasurements_control.csv'):
+def create_ctrl_output(settings, out_dir):
     '''Create the fixed discount control output of the model.
 
     :param settings: pd.dataframe. Contains the settings to run the model with.
-    :param file: string. Contains the output file.
+    :param out_dir: Path. Output directory.
     :return: None
     '''
 
@@ -153,27 +147,20 @@ def create_ctrl_output(settings, file = './data/timemeasurements_control.csv'):
                 'fill_rate': fill_rate,
             })
 
-            pd.DataFrame(results).to_csv(file)
+            pd.DataFrame(results).to_csv(out_dir / 'timemeasurements_control',
+                                         index = False)
             count += 1
 
 
 def main():
     """Main function of the module."""
 
-    file = './data/timemeasurements_check.csv'
-    ctrl_file = './data/timemeasurements_control.csv'
+    output_dir = Path(argv[1]) if len(argv) > 1 else Path('./data/')
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    if len(argv) < 1:
-        raise ValueError('Incorrect use of script')
-    elif len(argv) == 2:
-        file = argv[1]
-    elif len(argv) == 3:
-        file = argv[1]
-        ctrl_file = argv[2]
-
-    settings, methods, rlkwargs = get_variables()
-    create_output(settings, methods, rlkwargs, file)
-    create_ctrl_output(settings, ctrl_file)
+    settings, methods = get_variables()
+    create_output(settings, methods, output_dir)
+    create_ctrl_output(settings, output_dir)
     print('done')
 
 if __name__ == '__main__':
