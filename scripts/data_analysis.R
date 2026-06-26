@@ -26,16 +26,20 @@ setwd(output_dir)
 # load libraries
 lib_path <- "./R/library"
 if (!dir.exists(lib_path)) dir.create(lib_path, recursive = TRUE)
-.libPaths(lib_path)
+.libPaths(c(lib_path, .libPaths()))  
 
-packages <- c("ggplot2", "dplyr", "patchwork", "pheatmap", "RColorBrewer", "readxl", "multcompView")
+# Increase timeout for slow connections
+options(timeout = 300)
+
+packages <- c("ggplot2", "dplyr", "patchwork", "pheatmap", 
+              "RColorBrewer", "readxl", "multcompView")
 
 for (pkg in packages) {
   if (!require(pkg, character.only = TRUE)) {
     install.packages(pkg, 
-                     repos   = "https://cloud.r-project.org",
-                     lib     = lib_path)
-    library(pkg, character.only = TRUE, lib.loc = lib_path)
+                     repos = "https://cloud.r-project.org",
+                     lib   = lib_path)
+    library(pkg, character.only = TRUE)
   }
 }
 
